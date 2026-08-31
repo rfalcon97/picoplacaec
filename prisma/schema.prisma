@@ -1,0 +1,104 @@
+// Prisma schema — Pico y Placa EC
+// docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum Weekday {
+  MONDAY
+  TUESDAY
+  WEDNESDAY
+  THURSDAY
+  FRIDAY
+  SATURDAY
+  SUNDAY
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  passwordHash String
+  role         Role      @default(USER)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  vehicles     Vehicle[]
+}
+
+/// A city with its own circulation-restriction rules. Rules are data, not code,
+/// so adding a new city never requires an app release.
+model City {
+  id                         String           @id @default(cuid())
+  slug                       String           @unique
+  name                       String
+  active                     Boolean          @default(true)
+  allDay                     Boolean          @default(false)
+  timeStart                  String?
+  timeEnd                    String?
+  suspendsOnNationalHolidays Boolean          @default(true)
+  sourceUrl                  String?
+  createdAt                  DateTime         @default(now())
+  updatedAt                  DateTime         @updatedAt
+  dayRules                   DayRule[]
+  dateExceptions             DateException[]
+  vehicles                   Vehicle[]
+}
+
+/// Which plate last-digits are restricted on a given weekday, per city.
+/// An empty `digits` array means no restriction that day.
+model DayRule {
+  id      String  @id @default(cuid())
+  cityId  String
+  city    City    @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  weekday Weekday
+  digits  Int[]
+
+  @@unique([cityId, weekday])
+}
+
+/// One-off override for a specific date and city (local holiday, municipal
+/// suspension, etc.). Takes precedence over the weekday DayRule and over
+/// NationalHoliday for that city.
+model DateException {
+  id                String   @id @default(cuid())
+  cityId            String
+  city              City     @relation(fields: [cityId], references: [id], onDelete: Cascade)
+  date              DateTime @db.Date
+  reason            String
+  restrictionActive Boolean  @default(false)
+  createdAt         DateTime @default(now())
+
+  @@unique([cityId, date])
+}
+
+/// Ecuador national holidays, synced automatically from a public API.
+/// A city only respects these if City.suspendsOnNationalHolidays is true,
+/// and a DateException for that city+date always wins over this.
+model NationalHoliday {
+  id   String   @id @default(cuid())
+  date DateTime @unique @db.Date
+  name String
+  year Int
+}
+
+model Vehicle {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  nickname   String
+  plateDigit Int
+  cityId     String
+  city       City     @relation(fields: [cityId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
