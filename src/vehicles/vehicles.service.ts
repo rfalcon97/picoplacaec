@@ -31,7 +31,13 @@ export class VehiclesService {
       throw new NotFoundException('City not found');
     }
     return this.prisma.vehicle.create({
-      data: { userId, nickname: dto.nickname, plateDigit: dto.plateDigit, cityId: dto.cityId },
+      data: {
+        userId,
+        nickname: dto.nickname,
+        plateDigit: dto.plateDigit,
+        cityId: dto.cityId,
+        reminderTime: dto.reminderTime,
+      },
       include: VEHICLE_INCLUDE,
     });
   }

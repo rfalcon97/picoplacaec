@@ -28,11 +28,47 @@ enum Weekday {
 model User {
   id           String    @id @default(cuid())
   email        String    @unique
-  passwordHash String
+  /// Nullable because a user who signs in with Google only may never set one.
+  passwordHash String?
+  /// Google's stable subject id, set for users who have linked Google sign-in.
+  googleId     String?   @unique
   role         Role      @default(USER)
   createdAt    DateTime  @default(now())
   updatedAt    DateTime  @updatedAt
   vehicles     Vehicle[]
+  resetTokens  PasswordResetToken[]
+  deviceTokens DeviceToken[]
+}
+
+/// A one-time-use password reset code, emailed to the user. The code itself
+/// is never stored — only its hash — so a leaked database can't be used to
+/// reset accounts.
+model PasswordResetToken {
+  id         String    @id @default(cuid())
+  userId     String
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codeHash   String
+  expiresAt  DateTime
+  attempts   Int       @default(0)
+  usedAt     DateTime?
+  createdAt  DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// A Firebase Cloud Messaging token for one signed-in device. A user can
+/// have several (multiple devices); a token is unique across all users
+/// since Firebase reissues a fresh one per install/reset.
+model DeviceToken {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  token     String   @unique
+  platform  String   @default("android")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 }
 
 /// A city with its own circulation-restriction rules. Rules are data, not code,
@@ -99,6 +135,10 @@ model Vehicle {
   plateDigit Int
   cityId     String
   city       City     @relation(fields: [cityId], references: [id])
+  /// HH:mm, local device time — when to fire the SAME-DAY reminder on a
+  /// restricted day itself. A separate night-before reminder is always sent
+  /// too, at a fixed default time (not user-configurable).
+  reminderTime String @default("20:00")
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }

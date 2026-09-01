@@ -1,5 +1,6 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { PushService } from '../push/push.service';
 import { CreateCityDto } from './dto/create-city.dto';
 import { UpdateCityDto } from './dto/update-city.dto';
 import { UpsertDayRuleDto } from './dto/upsert-day-rule.dto';
@@ -10,9 +11,18 @@ const CITY_INCLUDE = {
   dateExceptions: { orderBy: { date: 'asc' as const } },
 };
 
+/** A date exception this close to "today" is treated as short-notice and triggers a push. */
+const URGENT_NOTICE_DAYS = 3;
+const MS_PER_DAY = 24 * 60 * 60 * 1000;
+
 @Injectable()
 export class CitiesService {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly logger = new Logger(CitiesService.name);
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly pushService: PushService,
+  ) {}
 
   findAllActive() {
     return this.prisma.city.findMany({
@@ -65,13 +75,29 @@ export class CitiesService {
   }
 
   async createDateException(cityId: string, dto: CreateDateExceptionDto) {
-    await this.findById(cityId);
+    const city = await this.findById(cityId);
     const date = new Date(dto.date);
-    return this.prisma.dateException.upsert({
+    const restrictionActive = dto.restrictionActive ?? false;
+
+    const exception = await this.prisma.dateException.upsert({
       where: { cityId_date: { cityId, date } },
-      create: { cityId, date, reason: dto.reason, restrictionActive: dto.restrictionActive ?? false },
-      update: { reason: dto.reason, restrictionActive: dto.restrictionActive ?? false },
+      create: { cityId, date, reason: dto.reason, restrictionActive },
+      update: { reason: dto.reason, restrictionActive },
     });
+
+    const daysUntil = Math.ceil((date.getTime() - Date.now()) / MS_PER_DAY);
+    if (daysUntil >= 0 && daysUntil <= URGENT_NOTICE_DAYS) {
+      const suspended = !restrictionActive;
+      const title = suspended ? `Pico y placa suspendido en ${city.name}` : `Aviso en ${city.name}`;
+      const body = suspended
+        ? `El ${dto.date} no habrá restricción en ${city.name}: ${dto.reason}`
+        : `El ${dto.date} sí aplica la restricción en ${city.name}: ${dto.reason}`;
+      this.pushService
+        .notifyCityUsers(cityId, title, body)
+        .catch((error: Error) => this.logger.warn(`Push notification failed: ${error.message}`));
+    }
+
+    return exception;
   }
 
   async removeDateException(cityId: string, exceptionId: string) {

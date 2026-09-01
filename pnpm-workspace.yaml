@@ -1,8 +1,10 @@
 allowBuilds:
+  '@firebase/util': true
   '@parcel/watcher': true
   '@prisma/engines': true
   '@scarf/scarf': false
   bcrypt: true
   esbuild: true
   prisma: true
+  protobufjs: true
   unrs-resolver: true

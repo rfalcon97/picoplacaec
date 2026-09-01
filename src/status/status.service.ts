@@ -141,7 +141,13 @@ export class StatusService {
       throw new NotFoundException('Vehicle not found');
     }
     const status = await this.buildStatus(vehicle.city, vehicle.plateDigit);
-    return { vehicleId: vehicle.id, nickname: vehicle.nickname, plateDigit: vehicle.plateDigit, ...status };
+    return {
+      vehicleId: vehicle.id,
+      nickname: vehicle.nickname,
+      plateDigit: vehicle.plateDigit,
+      reminderTime: vehicle.reminderTime,
+      ...status,
+    };
   }
 
   async statusForAllVehicles(userId: string) {
@@ -152,7 +158,13 @@ export class StatusService {
     return Promise.all(
       vehicles.map(async (vehicle) => {
         const status = await this.buildStatus(vehicle.city, vehicle.plateDigit);
-        return { vehicleId: vehicle.id, nickname: vehicle.nickname, plateDigit: vehicle.plateDigit, ...status };
+        return {
+          vehicleId: vehicle.id,
+          nickname: vehicle.nickname,
+          plateDigit: vehicle.plateDigit,
+          reminderTime: vehicle.reminderTime,
+          ...status,
+        };
       }),
     );
   }
