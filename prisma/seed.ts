@@ -28,7 +28,7 @@ async function seedAdmin() {
 async function seedQuito() {
   const quito = await prisma.city.upsert({
     where: { slug: 'quito' },
-    update: {},
+    update: { latitude: -0.1807, longitude: -78.4678 },
     create: {
       slug: 'quito',
       name: 'Quito',
@@ -36,6 +36,8 @@ async function seedQuito() {
       timeEnd: '19:30',
       suspendsOnNationalHolidays: true,
       sourceUrl: 'https://www.quito.gob.ec/pico-y-placa',
+      latitude: -0.1807,
+      longitude: -78.4678,
     },
   });
 

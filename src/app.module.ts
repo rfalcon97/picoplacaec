@@ -10,6 +10,8 @@ import { VehiclesModule } from './vehicles/vehicles.module';
 import { StatusModule } from './status/status.module';
 import { HolidaysModule } from './holidays/holidays.module';
 import { PushModule } from './push/push.module';
+import { WeatherModule } from './weather/weather.module';
+import { RoutesModule } from './routes/routes.module';
 
 @Module({
   imports: [
@@ -22,6 +24,8 @@ import { PushModule } from './push/push.module';
     StatusModule,
     HolidaysModule,
     PushModule,
+    WeatherModule,
+    RoutesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

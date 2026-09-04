@@ -81,6 +81,10 @@ model City {
   allDay                     Boolean          @default(false)
   timeStart                  String?
   timeEnd                    String?
+  /// Centroide de la ciudad — usado para consultar el clima (Open-Meteo) y
+  /// como referencia de origen/destino para el planificador de rutas.
+  latitude                   Float?
+  longitude                  Float?
   suspendsOnNationalHolidays Boolean          @default(true)
   sourceUrl                  String?
   createdAt                  DateTime         @default(now())
